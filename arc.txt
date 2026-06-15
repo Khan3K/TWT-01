@@ -1,0 +1,337 @@
+Based on your project guideline, your title is Medical Store Stock and Billing System. The subject specifically requires HTML5, CSS3, JavaScript, PHP, MySQL, and Web Server.
+1. Project Overview
+Project Title
+Medical Store Stock and Billing System
+Aim
+Develop a web-based system to manage medicine inventory, sales billing, suppliers, customers, and stock monitoring for a pharmacy/medical store.
+Objectives
+Manage medicine inventory efficiently.
+Generate bills automatically.
+Track medicine stock levels.
+Monitor expired medicines.
+Maintain supplier records.
+Generate sales reports.
+Reduce manual paperwork.
+
+2. Recommended Technology Stack
+Frontend
+HTML5
+CSS3
+JavaScript
+Bootstrap 5
+AJAX
+
+Backend
+PHP 8
+
+Database
+MySQL
+
+Server
+XAMPP
+Apache Web Server
+
+Optional Advanced Features
+Chart.js (Sales Charts)
+jQuery
+SweetAlert2
+PHPMailer (Email Alerts)
+
+
+3. System Users
+Admin
+Manage medicines
+Manage suppliers
+Manage staff
+View reports
+Monitor stock
+Pharmacist/Cashier
+Create bills
+Search medicines
+Process sales
+Store Manager
+View inventory
+View reports
+Check expiry medicines
+
+4. Main Modules
+A. Login Module
+Functions:
+Login
+Logout
+Session Management
+Role-based Access
+Tables:
+users
+
+
+B. Medicine Management Module
+Functions:
+Add medicine
+Edit medicine
+Delete medicine
+Search medicine
+Update stock
+Tables:
+medicines
+
+Fields:
+medicine_id
+medicine_name
+category
+batch_no
+expiry_date
+purchase_price
+selling_price
+quantity
+supplier_id
+created_at
+
+
+C. Supplier Management Module
+Functions:
+Add supplier
+Edit supplier
+Delete supplier
+Tables:
+suppliers
+
+Fields:
+supplier_id
+supplier_name
+phone
+email
+address
+
+
+D. Inventory Management Module
+Functions:
+Stock In
+Stock Out
+Reorder Alert
+Stock History
+Tables:
+stock_transactions
+
+Fields:
+transaction_id
+medicine_id
+type
+quantity
+date
+
+
+E. Billing System
+Functions:
+Create Invoice
+Add Multiple Medicines
+Auto Calculate Total
+Print Receipt
+Tables:
+sales
+sale_items
+
+
+F. Customer Management
+Functions:
+Add Customer
+View Purchase History
+Tables:
+customers
+
+Fields:
+customer_id
+name
+phone
+email
+
+
+G. Expiry Monitoring
+Functions:
+Show medicines expiring within 30 days
+Highlight expired medicines
+SQL Example:
+SELECT * FROM medicines
+WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY);
+
+
+H. Reports Module
+Reports:
+Daily Sales
+Monthly Sales
+Best Selling Medicines
+Low Stock Report
+Expired Medicine Report
+Charts:
+Bar Chart
+Pie Chart
+Line Chart
+Using:
+Chart.js
+
+
+5. Database Design (ERD Blueprint)
+USERS
+│
+├── user_id (PK)
+├── username
+├── password
+└── role
+
+SUPPLIERS
+│
+├── supplier_id (PK)
+├── supplier_name
+├── phone
+└── address
+
+MEDICINES
+│
+├── medicine_id (PK)
+├── supplier_id (FK)
+├── medicine_name
+├── batch_no
+├── expiry_date
+├── purchase_price
+├── selling_price
+└── quantity
+
+CUSTOMERS
+│
+├── customer_id (PK)
+└── name
+
+SALES
+│
+├── sale_id (PK)
+├── customer_id (FK)
+├── user_id (FK)
+├── sale_date
+└── total_amount
+
+SALE_ITEMS
+│
+├── item_id (PK)
+├── sale_id (FK)
+├── medicine_id (FK)
+├── quantity
+└── price
+
+STOCK_TRANSACTIONS
+│
+├── transaction_id (PK)
+├── medicine_id (FK)
+├── quantity
+├── type
+└── transaction_date
+
+
+6. Suggested Folder Structure
+medical-store-system/
+│
+├── assets/
+│   ├── css/
+│   ├── js/
+│   ├── images/
+│
+├── config/
+│   └── database.php
+│
+├── includes/
+│   ├── header.php
+│   ├── footer.php
+│   ├── sidebar.php
+│
+├── auth/
+│   ├── login.php
+│   ├── logout.php
+│
+├── medicines/
+│   ├── add.php
+│   ├── edit.php
+│   ├── delete.php
+│   ├── list.php
+│
+├── suppliers/
+│
+├── customers/
+│
+├── billing/
+│   ├── create_bill.php
+│   ├── invoice.php
+│
+├── reports/
+│
+├── sql/
+│   └── medical_store.sql
+│
+├── dashboard.php
+│
+└── index.php
+
+
+7. Interface Screens (for Report Screenshots)
+Login Page
+Dashboard
+Medicine Management
+Supplier Management
+Customer Management
+Billing Page
+Invoice Print Page
+Sales Report
+Low Stock Report
+Expiry Medicine Report
+
+8. Extra Features (High Marks)
+Since marks are given for creativity and additional features, consider adding:
+✅ Barcode Generator
+✅ Medicine Search with AJAX
+✅ Dark Mode
+✅ Dashboard Analytics
+✅ PDF Invoice Download
+✅ Email Invoice
+✅ Low Stock Notification
+✅ Expiry Alert Notification
+✅ Responsive Mobile Design
+
+9. Task Division for 4 Members
+Member 1
+Frontend Design
+HTML
+CSS
+Bootstrap
+Member 2
+Medicine + Supplier Module
+Member 3
+Billing + Customer Module
+Member 4
+Reports + Testing + Database
+
+10. Features Checklist (Must Have)
+Feature
+Priority
+Login System
+High
+Medicine CRUD
+High
+Supplier CRUD
+High
+Billing System
+High
+Stock Management
+High
+MySQL Database
+High
+Reports
+High
+Error Handling
+High
+Responsive UI
+Medium
+Expiry Alert
+Medium
+Sales Charts
+Medium
+
+This blueprint fully satisfies the TWT2231/TWT6223 requirements of using HTML5, CSS3, JavaScript, PHP, MySQL, and a Web Server, while also providing enough functionality and creativity to target high marks.
+
