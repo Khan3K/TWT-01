@@ -1,33 +1,40 @@
 <?php
 session_start();
-require_once 'config/db.php';
+require_once "config/db.php";
 
-if (isset($_SESSION['user_id'])) {
+if (isset($_SESSION["user_id"])) {
     header("Location: dashboard.php");
     exit();
 }
 
 $error = "";
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = $conn->real_escape_string($_POST['username']);
-    $password = $_POST['password'];
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $username = $conn->real_escape_string($_POST["username"]);
+    $password = $_POST["password"];
 
-    $stmt = $conn->prepare("SELECT user_id, username, password, full_name, role FROM users WHERE username = ?");
+    $stmt = $conn->prepare(
+        "SELECT user_id, username, password, full_name, role FROM users WHERE username = ?",
+    );
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($user = $result->fetch_assoc()) {
-        if (password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['full_name'] = $user['full_name'];
-            $_SESSION['role'] = $user['role'];
+        if (password_verify($password, $user["password"])) {
+            $_SESSION["user_id"] = $user["user_id"];
+            $_SESSION["username"] = $user["username"];
+            $_SESSION["full_name"] = $user["full_name"];
+            $_SESSION["role"] = $user["role"];
 
             // Log login
-            require_once 'includes/functions.php';
-            log_activity('LOGIN', 'users', $user['user_id'], $user['full_name'] . ' logged in');
+            require_once "includes/functions.php";
+            log_activity(
+                "LOGIN",
+                "users",
+                $user["user_id"],
+                $user["full_name"] . " logged in",
+            );
 
             header("Location: dashboard.php");
             exit();
@@ -62,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <p>Sign in to your account</p>
                 </div>
                 <div class="login-body">
-                    <?php if($error): ?>
+                    <?php if ($error): ?>
                         <div class="alert alert-danger" style="font-size: 0.85rem;">
                             <i class="fas fa-exclamation-circle me-1"></i>
                             <?php echo $error; ?>
@@ -83,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <input type="password" name="password" id="loginPassword" class="form-control" placeholder="Enter your password" required
                                     style="padding-left: 40px; padding-right: 40px;">
                                 <i class="fas fa-lock" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem;"></i>
-                                <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px 8px;">
+                                <button type="button" onclick="togglePassword()" aria-label="Toggle password visibility" title="Show/Hide password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px 8px;">
                                     <i class="fas fa-eye" id="toggleIcon"></i>
                                 </button>
                             </div>

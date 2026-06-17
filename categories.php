@@ -1,61 +1,77 @@
 <?php
-require_once 'config/db.php';
-require_once 'includes/functions.php';
+require_once "config/db.php";
+require_once "includes/functions.php";
 check_login();
+check_role(["admin"]);
 
 // Handle Add/Edit
-if (isset($_POST['save_category'])) {
-    $name = trim($_POST['name']);
-    $description = trim($_POST['description']);
-    $id = $_POST['id'];
+if (isset($_POST["save_category"])) {
+    $name = trim($_POST["name"]);
+    $description = trim($_POST["description"]);
+    $id = $_POST["id"];
 
     if (empty($name)) {
-        redirect('categories.php', "Category name is required!", 'danger');
+        redirect("categories.php", "Category name is required!", "danger");
     }
 
     if ($id) {
-        $stmt = $conn->prepare("UPDATE categories SET category_name=?, description=? WHERE category_id=?");
+        $stmt = $conn->prepare(
+            "UPDATE categories SET category_name=?, description=? WHERE category_id=?",
+        );
         $stmt->bind_param("ssi", $name, $description, $id);
         $msg = "Category updated successfully!";
     } else {
-        $stmt = $conn->prepare("INSERT INTO categories (category_name, description) VALUES (?, ?)");
+        $stmt = $conn->prepare(
+            "INSERT INTO categories (category_name, description) VALUES (?, ?)",
+        );
         $stmt->bind_param("ss", $name, $description);
         $msg = "Category added successfully!";
     }
-    
+
     try {
         $stmt->execute();
         $log_id = $id ?: $conn->insert_id;
-        log_activity($id ? 'UPDATE' : 'CREATE', 'categories', $log_id, ($id ? 'Updated' : 'Added') . " category: $name");
-        redirect('categories.php', $msg);
+        log_activity(
+            $id ? "UPDATE" : "CREATE",
+            "categories",
+            $log_id,
+            ($id ? "Updated" : "Added") . " category: $name",
+        );
+        redirect("categories.php", $msg);
     } catch (Exception $e) {
-        redirect('categories.php', "Error: " . $e->getMessage(), 'danger');
+        redirect("categories.php", "Error: " . $e->getMessage(), "danger");
     }
 }
 
 // Handle Delete
-if (isset($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
+if (isset($_GET["delete"])) {
+    $id = (int) $_GET["delete"];
     $stmt = $conn->prepare("DELETE FROM categories WHERE category_id=?");
     $stmt->bind_param("i", $id);
     try {
         $stmt->execute();
-        log_activity('DELETE', 'categories', $id, "Deleted category ID: $id");
-        redirect('categories.php', "Category deleted successfully!");
+        log_activity("DELETE", "categories", $id, "Deleted category ID: $id");
+        redirect("categories.php", "Category deleted successfully!");
     } catch (Exception $e) {
-        redirect('categories.php', "Cannot delete category: " . $e->getMessage(), 'danger');
+        redirect(
+            "categories.php",
+            "Cannot delete category: " . $e->getMessage(),
+            "danger",
+        );
     }
 }
 
-$categories = $conn->query("SELECT * FROM categories ORDER BY category_id DESC");
+$categories = $conn->query(
+    "SELECT * FROM categories ORDER BY category_id DESC",
+);
 
-include 'includes/header.php';
-include 'includes/sidebar.php';
+include "includes/header.php";
+include "includes/sidebar.php";
 ?>
 
 <div class="page-header">
     <h2><i class="fas fa-tags me-2 text-primary"></i>Category Management</h2>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categoryModal">
+    <button class="btn btn-primary" id="addCategoryBtn" data-bs-toggle="modal" data-bs-target="#categoryModal">
         <i class="fas fa-plus"></i> Add New Category
     </button>
 </div>
@@ -73,23 +89,41 @@ include 'includes/sidebar.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if($categories->num_rows > 0): ?>
-                        <?php while($cat = $categories->fetch_assoc()): ?>
+                    <?php if ($categories->num_rows > 0): ?>
+                        <?php while ($cat = $categories->fetch_assoc()): ?>
                         <tr>
-                            <td><span class="badge bg-light text-dark">#<?php echo $cat['category_id']; ?></span></td>
-                            <td class="fw-bold"><?php echo $cat['category_name']; ?></td>
-                            <td class="text-muted"><?php echo $cat['description']; ?></td>
+                            <td><span class="badge bg-light text-dark">#<?php echo $cat[
+                                "category_id"
+                            ]; ?></span></td>
+                            <td class="fw-bold"><?php echo $cat[
+                                "category_name"
+                            ]; ?></td>
+                            <td class="text-muted"><?php echo $cat[
+                                "description"
+                            ]; ?></td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-info edit-btn" 
-                                        data-id="<?php echo $cat['category_id']; ?>" 
-                                        data-name="<?php echo $cat['category_name']; ?>" 
-                                        data-description="<?php echo $cat['description']; ?>"
-                                        data-bs-toggle="modal" data-bs-target="#categoryModal" title="Edit">
+                                <button class="btn btn-sm btn-info edit-btn"
+                                        data-id="<?php echo $cat[
+                                            "category_id"
+                                        ]; ?>"
+                                        data-name="<?php echo htmlspecialchars(
+                                            $cat["category_name"],
+                                            ENT_QUOTES,
+                                            "UTF-8",
+                                        ); ?>"
+                                        data-description="<?php echo htmlspecialchars(
+                                            $cat["description"] ?? "",
+                                            ENT_QUOTES,
+                                            "UTF-8",
+                                        ); ?>"
+                                        data-bs-toggle="modal" data-bs-target="#categoryModal" title="Edit category" aria-label="Edit category">
                                     <i class="fas fa-pen"></i>
                                 </button>
-                                <a href="categories.php?delete=<?php echo $cat['category_id']; ?>" 
-                                   class="btn btn-sm btn-danger" 
-                                   onclick="return confirm('Are you sure?')" title="Delete">
+                                <a href="categories.php?delete=<?php echo $cat[
+                                    "category_id"
+                                ]; ?>"
+                                   class="btn btn-sm btn-danger"
+                                   data-confirm="Delete this category permanently?" title="Delete category" aria-label="Delete category">
                                     <i class="fas fa-trash"></i>
                                 </a>
                             </td>
@@ -118,7 +152,7 @@ include 'includes/sidebar.php';
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-tags me-2 text-primary"></i>Category Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="id" id="cat_id">
@@ -145,13 +179,24 @@ include 'includes/sidebar.php';
 </div>
 
 <script>
+const categoryModal = document.getElementById('categoryModal');
+const categoryForm = categoryModal.querySelector('form');
+
+categoryModal.addEventListener('show.bs.modal', (event) => {
+    const trigger = event.relatedTarget;
+    if (!trigger || !trigger.classList.contains('edit-btn')) {
+        categoryForm.reset();
+        document.getElementById('cat_id').value = '';
+    }
+});
+
 document.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.getElementById('cat_id').value = btn.dataset.id;
-        document.getElementById('cat_name').value = btn.dataset.name;
-        document.getElementById('cat_desc').value = btn.dataset.description;
+        document.getElementById('cat_name').value = btn.dataset.name || '';
+        document.getElementById('cat_desc').value = btn.dataset.description || '';
     });
 });
 </script>
 
-<?php include 'includes/footer.php'; ?>
+<?php include "includes/footer.php"; ?>

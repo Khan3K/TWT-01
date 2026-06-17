@@ -1,100 +1,162 @@
 <?php
-require_once 'config/db.php';
-require_once 'includes/functions.php';
+require_once "config/db.php";
+require_once "includes/functions.php";
 check_login();
+check_role(["admin", "pharmacist"]);
 
 // Handle Create Sale
-if (isset($_POST['create_sale'])) {
-    $customer_id = !empty($_POST['customer_id']) ? (int)$_POST['customer_id'] : null;
-    $payment_method = $_POST['payment_method'] ?? 'cash';
-    $discount = (float)($_POST['discount'] ?? 0);
-    $tax = (float)($_POST['tax'] ?? 0);
-    $notes = trim($_POST['notes'] ?? '');
+if (isset($_POST["create_sale"])) {
+    $customer_id = !empty($_POST["customer_id"])
+        ? (int) $_POST["customer_id"]
+        : null;
+    $payment_method = $_POST["payment_method"] ?? "cash";
+    $discount = (float) ($_POST["discount"] ?? 0);
+    $tax = (float) ($_POST["tax"] ?? 0);
+    $notes = trim($_POST["notes"] ?? "");
     $invoice_no = generate_invoice_no();
-    $medicines = $_POST['medicines'] ?? [];
-    $quantities = $_POST['quantities'] ?? [];
-    $prices = $_POST['prices'] ?? [];
+    $medicines = $_POST["medicines"] ?? [];
+    $quantities = $_POST["quantities"] ?? [];
+    $prices = $_POST["prices"] ?? [];
     $total_amount = 0;
 
     if (empty($medicines)) {
-        redirect('sales.php', "Please add at least one item!", 'danger');
+        redirect("sales.php", "Please add at least one item!", "danger");
     }
 
     $conn->begin_transaction();
     try {
-        $stmt = $conn->prepare("INSERT INTO sales (customer_id, invoice_no, subtotal, discount, tax, total_amount, payment_method, user_id) VALUES (?, ?, 0, ?, ?, 0, ?, ?)");
-        $stmt->bind_param("idddsi", $customer_id, $invoice_no, $discount, $tax, $payment_method, $_SESSION['user_id']);
+        $stmt = $conn->prepare(
+            "INSERT INTO sales (customer_id, invoice_no, subtotal, discount, tax, total_amount, payment_method, user_id) VALUES (?, ?, 0, ?, ?, 0, ?, ?)",
+        );
+        $stmt->bind_param(
+            "isddsi",
+            $customer_id,
+            $invoice_no,
+            $discount,
+            $tax,
+            $payment_method,
+            $_SESSION["user_id"],
+        );
         $stmt->execute();
         $sale_id = $conn->insert_id;
 
         foreach ($medicines as $i => $med_id) {
-            $med_id = (int)$med_id;
-            $qty = (int)$quantities[$i];
-            $price = (float)$prices[$i];
+            $med_id = (int) $med_id;
+            $qty = (int) $quantities[$i];
+            $price = (float) $prices[$i];
             $subtotal = $qty * $price;
             $total_amount += $subtotal;
 
             // Check stock
-            $stock_check = $conn->query("SELECT quantity, medicine_name FROM medicines WHERE medicine_id = $med_id")->fetch_assoc();
-            if ($stock_check && $stock_check['quantity'] < $qty) {
-                throw new Exception("Insufficient stock for " . $stock_check['medicine_name'] . " (Available: " . $stock_check['quantity'] . ")");
+            $stock_check = $conn
+                ->query(
+                    "SELECT quantity, medicine_name FROM medicines WHERE medicine_id = $med_id",
+                )
+                ->fetch_assoc();
+            if ($stock_check && $stock_check["quantity"] < $qty) {
+                throw new Exception(
+                    "Insufficient stock for " .
+                        $stock_check["medicine_name"] .
+                        " (Available: " .
+                        $stock_check["quantity"] .
+                        ")",
+                );
             }
 
-            $stmt = $conn->prepare("INSERT INTO sale_items (sale_id, medicine_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("iiidd", $sale_id, $med_id, $qty, $price, $subtotal);
+            $stmt = $conn->prepare(
+                "INSERT INTO sale_items (sale_id, medicine_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?)",
+            );
+            $stmt->bind_param(
+                "iiidd",
+                $sale_id,
+                $med_id,
+                $qty,
+                $price,
+                $subtotal,
+            );
             $stmt->execute();
         }
 
         $final_total = $total_amount - $discount + $tax;
-        $stmt = $conn->prepare("UPDATE sales SET subtotal = ?, total_amount = ? WHERE sale_id = ?");
+        $stmt = $conn->prepare(
+            "UPDATE sales SET subtotal = ?, total_amount = ? WHERE sale_id = ?",
+        );
         $stmt->bind_param("ddi", $total_amount, $final_total, $sale_id);
         $stmt->execute();
 
         $conn->commit();
 
         // Log the sale
-        log_activity('SALE', 'sales', $sale_id, "Invoice $invoice_no created - Total: " . format_currency($final_total));
+        log_activity(
+            "SALE",
+            "sales",
+            $sale_id,
+            "Invoice $invoice_no created - Total: " .
+                format_currency($final_total),
+        );
 
-        redirect('sales.php', "Invoice <strong>$invoice_no</strong> created successfully! Total: " . format_currency($final_total));
+        redirect(
+            "sales.php",
+            "Invoice <strong>$invoice_no</strong> created successfully! Total: " .
+                format_currency($final_total),
+        );
     } catch (Exception $e) {
         $conn->rollback();
-        redirect('sales.php', "Error: " . $e->getMessage(), 'danger');
+        redirect("sales.php", "Error: " . $e->getMessage(), "danger");
     }
 }
 
 // Handle Quick Customer Add
-if (isset($_POST['add_customer'])) {
-    $name = trim($_POST['new_cust_name']);
-    $phone = trim($_POST['new_cust_phone']);
-    $email = trim($_POST['new_cust_email']);
+if (isset($_POST["add_customer"])) {
+    $name = trim($_POST["new_cust_name"]);
+    $phone = trim($_POST["new_cust_phone"]);
+    $email = trim($_POST["new_cust_email"]);
 
     if (empty($name)) {
-        redirect('sales.php', "Customer name is required!", 'danger');
+        redirect("sales.php", "Customer name is required!", "danger");
     }
 
-    $stmt = $conn->prepare("INSERT INTO customers (name, phone, email) VALUES (?, ?, ?)");
+    $stmt = $conn->prepare(
+        "INSERT INTO customers (name, phone, email) VALUES (?, ?, ?)",
+    );
     $stmt->bind_param("sss", $name, $phone, $email);
     try {
         $stmt->execute();
         $new_id = $conn->insert_id;
-        log_activity('CREATE', 'customers', $new_id, "Quick-added customer: $name");
-        redirect('sales.php', "Customer <strong>$name</strong> added successfully!");
+        log_activity(
+            "CREATE",
+            "customers",
+            $new_id,
+            "Quick-added customer: $name",
+        );
+        redirect(
+            "sales.php",
+            "Customer <strong>$name</strong> added successfully!",
+        );
     } catch (Exception $e) {
-        redirect('sales.php', "Error: " . $e->getMessage(), 'danger');
+        redirect("sales.php", "Error: " . $e->getMessage(), "danger");
     }
 }
 
 // Fetch data
 $customers = $conn->query("SELECT * FROM customers ORDER BY name ASC");
-$medicines_list = $conn->query("SELECT * FROM medicines WHERE quantity > 0 ORDER BY medicine_name ASC");
-$sales_history = $conn->query("SELECT s.*, c.name as customer_name, u.full_name as cashier FROM sales s LEFT JOIN customers c ON s.customer_id = c.customer_id LEFT JOIN users u ON s.user_id = u.user_id ORDER BY s.sale_date DESC LIMIT 50");
+$medicines_list = $conn->query(
+    "SELECT * FROM medicines WHERE quantity > 0 ORDER BY medicine_name ASC",
+);
+$sales_history = $conn->query(
+    "SELECT s.*, c.name as customer_name, u.full_name as cashier FROM sales s LEFT JOIN customers c ON s.customer_id = c.customer_id LEFT JOIN users u ON s.user_id = u.user_id ORDER BY s.sale_date DESC LIMIT 50",
+);
 
 // Stats for today
-$today = date('Y-m-d');
-$today_sales = $conn->query("SELECT COUNT(*) as cnt, COALESCE(SUM(total_amount),0) as total FROM sales WHERE DATE(sale_date) = '$today'")->fetch_assoc();
+$today = date("Y-m-d");
+$today_sales = $conn
+    ->query(
+        "SELECT COUNT(*) as cnt, COALESCE(SUM(total_amount),0) as total FROM sales WHERE DATE(sale_date) = '$today'",
+    )
+    ->fetch_assoc();
 
-include 'includes/header.php';
-include 'includes/sidebar.php';
+include "includes/header.php";
+include "includes/sidebar.php";
 ?>
 
 <div class="page-header">
@@ -114,7 +176,9 @@ include 'includes/sidebar.php';
                 </div>
                 <div>
                     <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 500;">Today's Invoices</div>
-                    <div style="font-size: 1.2rem; font-weight: 700;"><?php echo $today_sales['cnt']; ?></div>
+                    <div style="font-size: 1.2rem; font-weight: 700;"><?php echo $today_sales[
+                        "cnt"
+                    ]; ?></div>
                 </div>
             </div>
         </div>
@@ -127,7 +191,9 @@ include 'includes/sidebar.php';
                 </div>
                 <div>
                     <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 500;">Today's Revenue</div>
-                    <div style="font-size: 1.2rem; font-weight: 700; color: #059669;"><?php echo format_currency($today_sales['total']); ?></div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: #059669;"><?php echo format_currency(
+                        $today_sales["total"],
+                    ); ?></div>
                 </div>
             </div>
         </div>
@@ -140,7 +206,11 @@ include 'includes/sidebar.php';
                 </div>
                 <div>
                     <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 500;">Items in Stock</div>
-                    <div style="font-size: 1.2rem; font-weight: 700;"><?php echo $conn->query("SELECT COALESCE(SUM(quantity),0) FROM medicines")->fetch_row()[0]; ?></div>
+                    <div style="font-size: 1.2rem; font-weight: 700;"><?php echo $conn
+                        ->query(
+                            "SELECT COALESCE(SUM(quantity),0) FROM medicines",
+                        )
+                        ->fetch_row()[0]; ?></div>
                 </div>
             </div>
         </div>
@@ -168,40 +238,63 @@ include 'includes/sidebar.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if($sales_history->num_rows > 0): ?>
-                        <?php while($sale = $sales_history->fetch_assoc()): ?>
+                    <?php if ($sales_history->num_rows > 0): ?>
+                        <?php while ($sale = $sales_history->fetch_assoc()): ?>
                         <tr>
                             <td>
-                                <a href="invoice.php?id=<?php echo $sale['sale_id']; ?>" class="text-decoration-none fw-bold" style="color: #6366f1;">
-                                    #<?php echo $sale['invoice_no']; ?>
+                                <a href="invoice.php?id=<?php echo $sale[
+                                    "sale_id"
+                                ]; ?>" class="text-decoration-none fw-bold" style="color: #6366f1;">
+                                    #<?php echo $sale["invoice_no"]; ?>
                                 </a>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center" style="gap: 8px;">
                                     <div style="width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); display: flex; align-items: center; justify-content: center; color: #4f46e5; font-weight: 600; font-size: 0.65rem;">
-                                        <?php echo strtoupper(substr($sale['customer_name'] ?? 'W', 0, 1)); ?>
+                                        <?php echo strtoupper(
+                                            substr(
+                                                $sale["customer_name"] ?? "W",
+                                                0,
+                                                1,
+                                            ),
+                                        ); ?>
                                     </div>
-                                    <?php echo $sale['customer_name'] ?: 'Walk-in'; ?>
+                                    <?php echo $sale["customer_name"] ?:
+                                        "Walk-in"; ?>
                                 </div>
                             </td>
-                            <td class="text-muted" style="font-size: 0.85rem;"><?php echo format_date($sale['sale_date']); ?></td>
-                            <td class="text-muted" style="font-size: 0.85rem;"><?php echo $sale['cashier']; ?></td>
-                            <td class="text-end fw-bold" style="color: #059669;"><?php echo format_currency($sale['total_amount']); ?></td>
+                            <td class="text-muted" style="font-size: 0.85rem;"><?php echo format_date(
+                                $sale["sale_date"],
+                            ); ?></td>
+                            <td class="text-muted" style="font-size: 0.85rem;"><?php echo $sale[
+                                "cashier"
+                            ]; ?></td>
+                            <td class="text-end fw-bold" style="color: #059669;"><?php echo format_currency(
+                                $sale["total_amount"],
+                            ); ?></td>
                             <td>
-                                <?php if($sale['payment_status'] == 'paid'): ?>
+                                <?php if ($sale["payment_status"] == "paid"): ?>
                                     <span class="badge" style="background: rgba(16,185,129,0.1); color: #059669;">Paid</span>
                                 <?php else: ?>
-                                    <span class="badge" style="background: rgba(245,158,11,0.1); color: #f59e0b;"><?php echo ucfirst($sale['payment_status']); ?></span>
+                                    <span class="badge" style="background: rgba(245,158,11,0.1); color: #f59e0b;"><?php echo ucfirst(
+                                        $sale["payment_status"],
+                                    ); ?></span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-center">
-                                <a href="invoice.php?id=<?php echo $sale['sale_id']; ?>" class="btn btn-sm btn-info" title="View Invoice">
+                                <a href="invoice.php?id=<?php echo $sale[
+                                    "sale_id"
+                                ]; ?>" class="btn btn-sm btn-info" title="View invoice" aria-label="View invoice">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="invoice.php?id=<?php echo $sale['sale_id']; ?>&print=1" class="btn btn-sm btn-success" title="Print" target="_blank">
+                                <a href="invoice.php?id=<?php echo $sale[
+                                    "sale_id"
+                                ]; ?>&print=1" class="btn btn-sm btn-success" title="Print invoice" aria-label="Print invoice" target="_blank">
                                     <i class="fas fa-print"></i>
                                 </a>
-                                <a href="invoice.php?id=<?php echo $sale['sale_id']; ?>" class="btn btn-sm btn-danger" title="Download PDF" target="_blank" onclick="setTimeout(function(){ document.querySelector('.btn-danger[title=Download PDF]')?.click(); }, 500);">
+                                <a href="invoice.php?id=<?php echo $sale[
+                                    "sale_id"
+                                ]; ?>&download=1" class="btn btn-sm btn-danger" title="Download invoice PDF" aria-label="Download invoice PDF" target="_blank">
                                     <i class="fas fa-file-pdf"></i>
                                 </a>
                             </td>
@@ -230,7 +323,7 @@ include 'includes/sidebar.php';
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-shopping-cart me-2 text-primary"></i>Create New Invoice</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
@@ -240,13 +333,23 @@ include 'includes/sidebar.php';
                             <div class="d-flex gap-2">
                                 <select name="customer_id" id="customerSelect" class="form-select flex-grow-1">
                                     <option value="">Walk-in Customer</option>
-                                    <?php while($cus = $customers->fetch_assoc()): ?>
-                                        <option value="<?php echo $cus['customer_id']; ?>" data-phone="<?php echo $cus['phone']; ?>" data-email="<?php echo $cus['email']; ?>">
-                                            <?php echo $cus['name']; ?> <?php echo $cus['phone'] ? "($cus[phone])" : ''; ?>
+                                    <?php while (
+                                        $cus = $customers->fetch_assoc()
+                                    ): ?>
+                                        <option value="<?php echo $cus[
+                                            "customer_id"
+                                        ]; ?>" data-phone="<?php echo $cus[
+    "phone"
+]; ?>" data-email="<?php echo $cus["email"]; ?>">
+                                            <?php echo $cus[
+                                                "name"
+                                            ]; ?> <?php echo $cus["phone"]
+     ? "(" . $cus["phone"] . ")"
+     : ""; ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
-                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#quickCustomerModal" title="Add New Customer">
+                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#quickCustomerModal" title="Add new customer" aria-label="Add new customer">
                                     <i class="fas fa-user-plus"></i>
                                 </button>
                             </div>
@@ -276,9 +379,21 @@ include 'includes/sidebar.php';
                             <div class="col-md-5">
                                 <select name="medicines[]" class="form-select med-select" required>
                                     <option value="">Select Medicine</option>
-                                    <?php while($med = $medicines_list->fetch_assoc()): ?>
-                                        <option value="<?php echo $med['medicine_id']; ?>" data-price="<?php echo $med['selling_price']; ?>" data-stock="<?php echo $med['quantity']; ?>" data-name="<?php echo $med['medicine_name']; ?>">
-                                            <?php echo $med['medicine_name']; ?> - <?php echo format_currency($med['selling_price']); ?> (Stock: <?php echo $med['quantity']; ?>)
+                                    <?php while (
+                                        $med = $medicines_list->fetch_assoc()
+                                    ): ?>
+                                        <option value="<?php echo $med[
+                                            "medicine_id"
+                                        ]; ?>" data-price="<?php echo $med[
+    "selling_price"
+]; ?>" data-stock="<?php echo $med["quantity"]; ?>" data-name="<?php echo $med[
+    "medicine_name"
+]; ?>">
+                                            <?php echo $med[
+                                                "medicine_name"
+                                            ]; ?> - <?php echo format_currency(
+     $med["selling_price"],
+ ); ?> (Stock: <?php echo $med["quantity"]; ?>)
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
@@ -351,7 +466,7 @@ include 'includes/sidebar.php';
             <div class="modal-content">
                 <div class="modal-header">
                     <h6 class="modal-title"><i class="fas fa-user-plus me-2 text-primary"></i>Quick Add Customer</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -435,8 +550,28 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Update subtotal when modal opens
-document.getElementById('saleModal').addEventListener('shown.bs.modal', calculateTotals);
+const saleModalEl = document.getElementById('saleModal');
+const saleForm = document.getElementById('saleForm');
+
+saleModalEl.addEventListener('show.bs.modal', () => {
+    saleForm.reset();
+
+    const rows = document.querySelectorAll('#sale-items .item-row');
+    rows.forEach((row, index) => {
+        if (index > 0) row.remove();
+    });
+
+    const firstRow = document.querySelector('#sale-items .item-row');
+    firstRow.querySelector('.med-select').value = '';
+    firstRow.querySelector('.qty-input').value = '1';
+    firstRow.querySelector('.qty-input').removeAttribute('max');
+    firstRow.querySelector('.price-input').value = '';
+    firstRow.querySelector('.subtotal-input').value = '';
+
+    calculateTotals();
+});
+
+saleModalEl.addEventListener('shown.bs.modal', calculateTotals);
 </script>
 
-<?php include 'includes/footer.php'; ?>
+<?php include "includes/footer.php"; ?>

@@ -1,12 +1,15 @@
 <?php
-require_once 'config/db.php';
-require_once 'includes/functions.php';
+require_once "config/db.php";
+require_once "includes/functions.php";
 check_login();
+check_role(["admin", "manager"]);
 
-$transactions = $conn->query("SELECT t.*, m.medicine_name as med_name, u.username FROM stock_transactions t LEFT JOIN medicines m ON t.medicine_id = m.medicine_id LEFT JOIN users u ON t.user_id = u.user_id ORDER BY t.transaction_date DESC");
+$transactions = $conn->query(
+    "SELECT t.*, m.medicine_name as med_name, u.username FROM stock_transactions t LEFT JOIN medicines m ON t.medicine_id = m.medicine_id LEFT JOIN users u ON t.user_id = u.user_id ORDER BY t.transaction_date DESC",
+);
 
-include 'includes/header.php';
-include 'includes/sidebar.php';
+include "includes/header.php";
+include "includes/sidebar.php";
 ?>
 
 <div class="page-header">
@@ -29,13 +32,18 @@ include 'includes/sidebar.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if($transactions->num_rows > 0): ?>
-                        <?php while($t = $transactions->fetch_assoc()): ?>
+                    <?php if ($transactions->num_rows > 0): ?>
+                        <?php while ($t = $transactions->fetch_assoc()): ?>
                         <tr>
-                            <td class="text-muted"><?php echo date('M d, Y H:i', strtotime($t['transaction_date'])); ?></td>
-                            <td class="fw-bold"><?php echo $t['med_name']; ?></td>
+                            <td class="text-muted"><?php echo date(
+                                "M d, Y H:i",
+                                strtotime($t["transaction_date"]),
+                            ); ?></td>
+                            <td class="fw-bold"><?php echo $t[
+                                "med_name"
+                            ]; ?></td>
                             <td>
-                                <?php if($t['type'] == 'IN'): ?>
+                                <?php if ($t["type"] == "IN"): ?>
                                     <span class="badge" style="background: rgba(16,185,129,0.1); color: #059669;">
                                         <i class="fas fa-arrow-down me-1" style="font-size: 0.7rem;"></i>IN
                                     </span>
@@ -46,18 +54,31 @@ include 'includes/sidebar.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <span class="fw-bold" style="color: <?php echo ($t['type'] == 'IN') ? '#059669' : '#ef4444'; ?>;">
-                                    <?php echo ($t['type'] == 'IN') ? '+' : '-'; ?><?php echo $t['quantity']; ?>
+                                <span class="fw-bold" style="color: <?php echo $t[
+                                    "type"
+                                ] == "IN"
+                                    ? "#059669"
+                                    : "#ef4444"; ?>;">
+                                    <?php
+                                    echo $t["type"] == "IN" ? "+" : "-";
+                                    echo $t["quantity"];
+                                    ?>
                                 </span>
                             </td>
-                            <td><span class="badge bg-light text-dark"><?php echo $t['reference_no']; ?></span></td>
-                            <td class="text-muted"><?php echo $t['notes']; ?></td>
+                            <td><span class="badge bg-light text-dark"><?php echo $t[
+                                "reference_no"
+                            ]; ?></span></td>
+                            <td class="text-muted"><?php echo $t[
+                                "notes"
+                            ]; ?></td>
                             <td>
                                 <div class="d-flex align-items-center" style="gap: 6px;">
                                     <div style="width: 24px; height: 24px; border-radius: 6px; background: rgba(99,102,241,0.1); display: flex; align-items: center; justify-content: center; color: #6366f1; font-weight: 600; font-size: 0.65rem;">
-                                        <?php echo strtoupper(substr($t['username'], 0, 1)); ?>
+                                        <?php echo strtoupper(
+                                            substr($t["username"], 0, 1),
+                                        ); ?>
                                     </div>
-                                    <?php echo $t['username']; ?>
+                                    <?php echo $t["username"]; ?>
                                 </div>
                             </td>
                         </tr>
@@ -78,4 +99,4 @@ include 'includes/sidebar.php';
     </div>
 </div>
 
-<?php include 'includes/footer.php'; ?>
+<?php include "includes/footer.php"; ?>

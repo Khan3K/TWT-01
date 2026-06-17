@@ -20,6 +20,8 @@ SET time_zone = "+00:00";
 --
 -- Database: `medical_store`
 --
+CREATE DATABASE IF NOT EXISTS `medical_store`;
+USE `medical_store`;
 
 -- --------------------------------------------------------
 
@@ -191,7 +193,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `full_name`, `username`, `password`, `role`, `email`, `phone`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'System Admin', 'admin', '$2y$10$REPLACE_WITH_PASSWORD_HASH', 'admin', 'admin@medstore.com', NULL, 'active', '2026-06-15 07:21:37', '2026-06-15 07:21:37');
+(1, 'System Admin', 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'admin@medstore.com', NULL, 'active', '2026-06-15 07:21:37', '2026-06-15 07:21:37');
 
 -- --------------------------------------------------------
 
@@ -241,7 +243,7 @@ CREATE TABLE `v_low_stock_medicines` (
 --
 DROP TABLE IF EXISTS `v_expired_medicines`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_expired_medicines`  AS SELECT `medicines`.`medicine_id` AS `medicine_id`, `medicines`.`medicine_name` AS `medicine_name`, `medicines`.`batch_no` AS `batch_no`, `medicines`.`expiry_date` AS `expiry_date`, `medicines`.`quantity` AS `quantity` FROM `medicines` WHERE `medicines`.`expiry_date` < curdate() ;
+CREATE ALGORITHM=UNDEFINED VIEW `v_expired_medicines` AS SELECT `medicines`.`medicine_id` AS `medicine_id`, `medicines`.`medicine_name` AS `medicine_name`, `medicines`.`batch_no` AS `batch_no`, `medicines`.`expiry_date` AS `expiry_date`, `medicines`.`quantity` AS `quantity` FROM `medicines` WHERE `medicines`.`expiry_date` < curdate();
 
 -- --------------------------------------------------------
 
@@ -250,7 +252,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `v_expiring_medicines`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_expiring_medicines`  AS SELECT `medicines`.`medicine_id` AS `medicine_id`, `medicines`.`medicine_name` AS `medicine_name`, `medicines`.`batch_no` AS `batch_no`, `medicines`.`expiry_date` AS `expiry_date`, `medicines`.`quantity` AS `quantity` FROM `medicines` WHERE `medicines`.`expiry_date` <= curdate() + interval 30 day ;
+CREATE ALGORITHM=UNDEFINED VIEW `v_expiring_medicines` AS SELECT `medicines`.`medicine_id` AS `medicine_id`, `medicines`.`medicine_name` AS `medicine_name`, `medicines`.`batch_no` AS `batch_no`, `medicines`.`expiry_date` AS `expiry_date`, `medicines`.`quantity` AS `quantity` FROM `medicines` WHERE `medicines`.`expiry_date` <= curdate() + interval 30 day;
 
 -- --------------------------------------------------------
 
@@ -259,7 +261,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `v_low_stock_medicines`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_low_stock_medicines`  AS SELECT `medicines`.`medicine_id` AS `medicine_id`, `medicines`.`medicine_name` AS `medicine_name`, `medicines`.`quantity` AS `quantity`, `medicines`.`reorder_level` AS `reorder_level` FROM `medicines` WHERE `medicines`.`quantity` <= `medicines`.`reorder_level` ;
+CREATE ALGORITHM=UNDEFINED VIEW `v_low_stock_medicines` AS SELECT `medicines`.`medicine_id` AS `medicine_id`, `medicines`.`medicine_name` AS `medicine_name`, `medicines`.`quantity` AS `quantity`, `medicines`.`reorder_level` AS `reorder_level` FROM `medicines` WHERE `medicines`.`quantity` <= `medicines`.`reorder_level`;
 
 --
 -- Indexes for dumped tables

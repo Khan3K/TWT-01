@@ -1,35 +1,47 @@
 <?php
-require_once 'config/db.php';
-require_once 'includes/functions.php';
+require_once "config/db.php";
+require_once "includes/functions.php";
 check_login();
+check_role(["admin", "manager"]);
 
-$type = $_GET['type'] ?? 'low_stock';
+$type = $_GET["type"] ?? "low_stock";
 $data = [];
+$title = "Reports";
+$icon = "fas fa-chart-line";
+$color = "#6366f1";
 
-if ($type == 'low_stock') {
+if ($type == "low_stock") {
     $data = $conn->query("SELECT * FROM v_low_stock_medicines");
     $title = "Low Stock Medicines";
     $icon = "fas fa-exclamation-triangle";
     $color = "#f59e0b";
-} elseif ($type == 'expired') {
+} elseif ($type == "expired") {
     $data = $conn->query("SELECT * FROM v_expired_medicines");
     $title = "Expired Medicines";
     $icon = "fas fa-calendar-times";
     $color = "#ef4444";
-} elseif ($type == 'expiring_soon') {
+} elseif ($type == "expiring_soon") {
     $data = $conn->query("SELECT * FROM v_expiring_medicines");
     $title = "Expiring Soon (30 Days)";
     $icon = "fas fa-clock";
     $color = "#f97316";
-} elseif ($type == 'sales') {
-    $data = $conn->query("SELECT s.*, c.name as customer_name FROM sales s LEFT JOIN customers c ON s.customer_id = c.customer_id ORDER BY s.sale_date DESC");
+} elseif ($type == "sales") {
+    $data = $conn->query(
+        "SELECT s.*, c.name as customer_name FROM sales s LEFT JOIN customers c ON s.customer_id = c.customer_id ORDER BY s.sale_date DESC",
+    );
     $title = "Sales Report";
     $icon = "fas fa-receipt";
     $color = "#10b981";
+} else {
+    $type = "low_stock";
+    $data = $conn->query("SELECT * FROM v_low_stock_medicines");
+    $title = "Low Stock Medicines";
+    $icon = "fas fa-exclamation-triangle";
+    $color = "#f59e0b";
 }
 
-include 'includes/header.php';
-include 'includes/sidebar.php';
+include "includes/header.php";
+include "includes/sidebar.php";
 ?>
 
 <div class="page-header">
@@ -40,16 +52,28 @@ include 'includes/sidebar.php';
 <div class="card mb-4">
     <div class="card-body">
         <div class="d-flex flex-wrap gap-2">
-            <a href="reports.php?type=low_stock" class="btn <?php echo $type == 'low_stock' ? 'btn-warning' : 'btn-outline-secondary'; ?>">
+            <a href="reports.php?type=low_stock" class="btn <?php echo $type ==
+            "low_stock"
+                ? "btn-warning"
+                : "btn-outline-secondary"; ?>">
                 <i class="fas fa-exclamation-triangle me-1"></i>Low Stock
             </a>
-            <a href="reports.php?type=expired" class="btn <?php echo $type == 'expired' ? 'btn-danger' : 'btn-outline-secondary'; ?>">
+            <a href="reports.php?type=expired" class="btn <?php echo $type ==
+            "expired"
+                ? "btn-danger"
+                : "btn-outline-secondary"; ?>">
                 <i class="fas fa-calendar-times me-1"></i>Expired
             </a>
-            <a href="reports.php?type=expiring_soon" class="btn <?php echo $type == 'expiring_soon' ? 'btn-info' : 'btn-outline-secondary'; ?>">
+            <a href="reports.php?type=expiring_soon" class="btn <?php echo $type ==
+            "expiring_soon"
+                ? "btn-info"
+                : "btn-outline-secondary"; ?>">
                 <i class="fas fa-clock me-1"></i>Expiring Soon
             </a>
-            <a href="reports.php?type=sales" class="btn <?php echo $type == 'sales' ? 'btn-success' : 'btn-outline-secondary'; ?>">
+            <a href="reports.php?type=sales" class="btn <?php echo $type ==
+            "sales"
+                ? "btn-success"
+                : "btn-outline-secondary"; ?>">
                 <i class="fas fa-receipt me-1"></i>Sales
             </a>
         </div>
@@ -66,7 +90,7 @@ include 'includes/sidebar.php';
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <?php if ($type == 'sales'): ?>
+            <?php if ($type == "sales"): ?>
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
@@ -77,13 +101,21 @@ include 'includes/sidebar.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if($data->num_rows > 0): ?>
-                            <?php while($row = $data->fetch_assoc()): ?>
+                        <?php if ($data->num_rows > 0): ?>
+                            <?php while ($row = $data->fetch_assoc()): ?>
                             <tr>
-                                <td><span class="badge bg-light text-dark">#<?php echo $row['invoice_no']; ?></span></td>
-                                <td><?php echo $row['customer_name'] ?: 'Walk-in'; ?></td>
-                                <td class="text-muted"><?php echo date('M d, Y', strtotime($row['sale_date'])); ?></td>
-                                <td class="text-end fw-bold" style="color: #059669;"><?php echo format_currency($row['total_amount']); ?></td>
+                                <td><span class="badge bg-light text-dark">#<?php echo $row[
+                                    "invoice_no"
+                                ]; ?></span></td>
+                                <td><?php echo $row["customer_name"] ?:
+                                    "Walk-in"; ?></td>
+                                <td class="text-muted"><?php echo date(
+                                    "M d, Y",
+                                    strtotime($row["sale_date"]),
+                                ); ?></td>
+                                <td class="text-end fw-bold" style="color: #059669;"><?php echo format_currency(
+                                    $row["total_amount"],
+                                ); ?></td>
                             </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
@@ -106,25 +138,37 @@ include 'includes/sidebar.php';
                             <th>Batch #</th>
                             <th>Expiry Date</th>
                             <th>Stock</th>
-                            <?php if($type == 'low_stock'): ?>
+                            <?php if ($type == "low_stock"): ?>
                                 <th>Reorder Level</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if($data->num_rows > 0): ?>
-                            <?php while($row = $data->fetch_assoc()): ?>
+                        <?php if ($data->num_rows > 0): ?>
+                            <?php while ($row = $data->fetch_assoc()): ?>
                             <tr>
-                                <td class="fw-bold"><?php echo $row['medicine_name']; ?></td>
-                                <td><span class="badge bg-light text-dark"><?php echo $row['batch_no'] ?? '-'; ?></span></td>
-                                <td class="text-muted"><?php echo $row['expiry_date'] ?? '-'; ?></td>
+                                <td class="fw-bold"><?php echo $row[
+                                    "medicine_name"
+                                ]; ?></td>
+                                <td><span class="badge bg-light text-dark"><?php echo $row[
+                                    "batch_no"
+                                ] ?? "-"; ?></span></td>
+                                <td class="text-muted"><?php echo $row[
+                                    "expiry_date"
+                                ] ?? "-"; ?></td>
                                 <td>
-                                    <span class="fw-bold" style="color: <?php echo ($row['quantity'] <= 5) ? '#ef4444' : '#059669'; ?>;">
-                                        <?php echo $row['quantity']; ?>
+                                    <span class="fw-bold" style="color: <?php echo $row[
+                                        "quantity"
+                                    ] <= 5
+                                        ? "#ef4444"
+                                        : "#059669"; ?>;">
+                                        <?php echo $row["quantity"]; ?>
                                     </span>
                                 </td>
-                                <?php if($type == 'low_stock'): ?>
-                                    <td><?php echo $row['reorder_level']; ?></td>
+                                <?php if ($type == "low_stock"): ?>
+                                    <td><?php echo $row[
+                                        "reorder_level"
+                                    ]; ?></td>
                                 <?php endif; ?>
                             </tr>
                             <?php endwhile; ?>
@@ -145,4 +189,4 @@ include 'includes/sidebar.php';
     </div>
 </div>
 
-<?php include 'includes/footer.php'; ?>
+<?php include "includes/footer.php"; ?>
